@@ -1,0 +1,336 @@
+1
+with open("sentences.txt", "w", encoding="utf-8") as file:
+    for i in range(5):
+        sentence = input(f"Nhap cau {i + 1}: ")
+        file.write(sentence + "\n")
+
+with open("sentences.txt", "r", encoding="utf-8") as file:
+    lines = file.readlines()
+
+print("\nNoi dung file:")
+print("".join(lines))
+
+print("Tong so dong:", len(lines))
+
+if lines:
+    longest = max(lines, key=lambda line: len(line.strip()))
+    print("Cau dai nhat:", longest.strip())
+2
+
+import re
+from collections import Counter
+
+with open("story.txt", "r", encoding="utf-8") as file:
+    content = file.read().lower()
+
+words = re.findall(r"\b[\w']+\b", content)
+word_counts = Counter(words)
+
+total_words = len(words)
+top_words = word_counts.most_common(5)
+
+result = f"Tong so tu: {total_words}\n"
+result += "Top 5 tu xuat hien nhieu nhat:\n"
+
+for word, count in top_words:
+    result += f"{word}: {count}\n"
+
+print(result)
+
+with open("summary.txt", "w", encoding="utf-8") as file:
+    file.write(result)
+3
+
+import os
+import time
+import threading
+
+SOURCE = "source.txt"
+TARGET_THREAD = "target.txt"
+TARGET_NORMAL = "target_normal.txt"
+CHUNK_SIZE = 1024 * 1024
+
+
+def copy_file(source, target, use_thread=False):
+    total_size = os.path.getsize(source)
+    copied = 0
+
+    with open(source, "rb") as src, open(target, "wb") as dst:
+        while True:
+            chunk = src.read(CHUNK_SIZE)
+            if not chunk:
+                break
+
+            dst.write(chunk)
+            copied += len(chunk)
+
+            if use_thread:
+                print(f"\rDa copy: {copied}/{total_size} bytes", end="")
+
+    if use_thread:
+        print()
+
+
+def threaded_copy():
+    copy_file(SOURCE, TARGET_THREAD, True)
+
+
+start = time.perf_counter()
+thread = threading.Thread(target=threaded_copy)
+thread.start()
+thread.join()
+thread_time = time.perf_counter() - start
+
+start = time.perf_counter()
+copy_file(SOURCE, TARGET_NORMAL)
+normal_time = time.perf_counter() - start
+
+with open(SOURCE, "rb") as f:
+    source_data = f.read()
+
+with open(TARGET_THREAD, "rb") as f:
+    target_data = f.read()
+
+print("Thoi gian copy bang thread:", thread_time, "giay")
+print("Thoi gian copy binh thuong:", normal_time, "giay")
+print("File dich giong file goc:", source_data == target_data)
+4
+
+import threading
+
+lock = threading.Lock()
+
+
+def write_logs(thread_id):
+    with lock:
+        with open("logs.txt", "a", encoding="utf-8") as file:
+            for i in range(1, 11):
+                file.write(f"Thread-{thread_id}: log {i}\n")
+
+
+with open("logs.txt", "w", encoding="utf-8") as file:
+    file.write("")
+
+threads = []
+
+for i in range(1, 4):
+    thread = threading.Thread(target=write_logs, args=(i,))
+    threads.append(thread)
+    thread.start()
+
+for thread in threads:
+    thread.join()
+
+with open("logs.txt", "r", encoding="utf-8") as file:
+    lines = file.readlines()
+
+print("Tong so dong log:", len(lines))
+print("So dong hop le:", sum(
+    1 for line in lines
+    if line.strip() and line.startswith(("Thread-1:", "Thread-2:", "Thread-3:"))
+))
+print("So dong khong trung:", len(set(lines)))
+print("Xac nhan:", len(lines) == 30 and len(set(lines)) == 30)
+print("Noi dung file:")
+print("".join(lines))
+5
+
+import os
+import time
+import threading
+
+FILE_NAME = "watched.txt"
+stop_event = threading.Event()
+
+
+def watch_file():
+    previous_content = ""
+
+    if os.path.exists(FILE_NAME):
+        with open(FILE_NAME, "r", encoding="utf-8") as file:
+            previous_content = file.read()
+
+    start_time = time.time()
+
+    while time.time() - start_time < 30 and not stop_event.is_set():
+        if os.path.exists(FILE_NAME):
+            with open(FILE_NAME, "r", encoding="utf-8") as file:
+                current_content = file.read()
+
+            if current_content != previous_content:
+                new_content = current_content[len(previous_content):]
+                print("Noi dung moi:", new_content)
+                previous_content = current_content
+
+        stop_event.wait(3)
+
+
+def simulate_user():
+    for i in range(1, 6):
+        if stop_event.wait(5):
+            break
+
+        with open(FILE_NAME, "a", encoding="utf-8") as file:
+            file.write(f"User added line {i}\n")
+
+
+with open(FILE_NAME, "w", encoding="utf-8") as file:
+    file.write("")
+
+watcher = threading.Thread(target=watch_file)
+user = threading.Thread(target=simulate_user)
+
+watcher.start()
+user.start()
+
+watcher.join()
+stop_event.set()
+user.join()
+
+print("Da dung theo doi file.")
+6
+
+import json
+
+students = [
+    {"id": 1, "name": "Nguyen Van A", "age": 20, "major": "IT"},
+    {"id": 2, "name": "Tran Thi B", "age": 21, "major": "Business"},
+    {"id": 3, "name": "Le Van C", "age": 19, "major": "Computer Science"}
+]
+
+with open("students.json", "w", encoding="utf-8") as file:
+    json.dump(students, file, ensure_ascii=False, indent=4)
+
+with open("students.json", "r", encoding="utf-8") as file:
+    loaded_students = json.load(file)
+
+print("Danh sach sinh vien:")
+print(json.dumps(loaded_students, ensure_ascii=False, indent=4))
+7
+
+import json
+
+
+def load_tasks():
+    try:
+        with open("todo.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
+        print("File todo.json bi loi dinh dang JSON.")
+        return []
+
+
+def add_task(tasks, title):
+    task = {
+        "id": len(tasks) + 1,
+        "title": title,
+        "completed": False
+    }
+
+    tasks.append(task)
+
+    with open("todo.json", "w", encoding="utf-8") as file:
+        json.dump(tasks, file, ensure_ascii=False, indent=4)
+
+
+tasks = load_tasks()
+
+add_task(tasks, "Hoc Python")
+add_task(tasks, "Lam bai tap")
+tasks = load_tasks()
+
+print("Danh sach task:")
+for task in tasks:
+    print(task)
+8
+
+import pickle
+
+
+class GameState:
+    def __init__(self, score, level):
+        self.score = score
+        self.level = level
+
+
+game = GameState(1500, 5)
+
+with open("state.dat", "wb") as file:
+    pickle.dump(game, file)
+
+with open("state.dat", "rb") as file:
+    loaded_game = pickle.load(file)
+
+print("Score:", loaded_game.score)
+print("Level:", loaded_game.level)
+
+print(
+    "Object giong nhau:",
+    game.score == loaded_game.score
+    and game.level == loaded_game.level
+)
+9
+
+import json
+
+
+def function_a():
+    product = {
+        "name": "Laptop",
+        "price": 20000000,
+        "quantity": 3
+    }
+
+    return json.dumps(product, ensure_ascii=False)
+
+
+def function_b(json_string):
+    product = json.loads(json_string)
+
+    name = product["name"]
+    price = float(product["price"])
+    quantity = int(product["quantity"])
+    total = price * quantity
+
+    print("Ten san pham:", name)
+    print("Gia san pham:", price)
+    print("So luong:", quantity)
+    print("Tong tien:", total)
+
+
+data = function_a()
+function_b(data)
+10
+
+import csv
+import json
+
+products = [
+    {"Name": "Laptop", "Price": 20000000},
+    {"Name": "Mouse", "Price": 350000},
+    {"Name": "Keyboard", "Price": 750000}
+]
+
+with open("products.csv", "w", newline="", encoding="utf-8") as file:
+    writer = csv.DictWriter(file, fieldnames=["Name", "Price"])
+    writer.writeheader()
+    writer.writerows(products)
+
+product_list = []
+
+with open("products.csv", "r", newline="", encoding="utf-8") as file:
+    reader = csv.DictReader(file)
+
+    for row in reader:
+        product_list.append({
+            "Name": row["Name"],
+            "Price": float(row["Price"])
+        })
+
+with open("products.json", "w", encoding="utf-8") as file:
+    json.dump(product_list, file, ensure_ascii=False, indent=4)
+
+with open("products.json", "r", encoding="utf-8") as file:
+    print(file.read())
